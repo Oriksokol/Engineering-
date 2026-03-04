@@ -24,19 +24,33 @@ class R2R_ADC:
         max=255
         for val in range(max+1):
             self.number_to_dac(val)
-            time.sleep (0.000001)
+            time.sleep (0.01)
             comp=GPIO.input(self.comp_gpio)
             if comp==1:
                return val
         return max
     def get_sc_voltage(self):
-        volt=(self.sequential_counting_adc()/255)*self.dynamic_range
+        volt=(self.sequential_counting_adc()/256)*self.dynamic_range
         GPIO.output(self.bits_gpio,self.sequential_counting_adc())
+        return volt
+    def successive_approximation_adc(self):
+        v=0
+        for i in range(7,-1,-1):
+            v|=(1<<i)
+            self.number_to_dac(v)
+            comp=GPIO.input(self.comp_gpio)
+            time.sleep (0.01)
+            if comp==1:
+               v&=~(1<<i)
+        return(v)
+    def get_sar_voltage(self):
+        volt=(self.successive_approximation_adc()/256)*self.dynamic_range
+        GPIO.output(self.bits_gpio,self.successive_approximation_adc())
         return volt
 if  __name__=="__main__":
     try:
         dac = R2R_ADC(3.285)
         while True:
-            print(dac.get_sc_voltage())
+            print(dac.get_sar_voltage())
     finally:
         dac.deinit()
